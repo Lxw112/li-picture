@@ -2,6 +2,7 @@
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
@@ -22,5 +23,6 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "post", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders("*");
+        System.out.println("跨域生效喽");
     }
 }

@@ -2,6 +2,10 @@ server:
   port: 8123
   servlet:
     context-path: /api
+    #cookie 30天过期
+    session:
+      cookie:
+        max-age: 2592000
 spring:
   application:
     name: li-picture-backend
@@ -10,6 +14,17 @@ spring:
     url: jdbc:mysql://localhost:3306/li_picture
     username: root
     password: 123456
+  #redis配置
+  redis:
+    database: 0
+    host: 192.168.182.128
+    port: 6379
+    timeout: 5000
+    password: 123321
+  #session配置
+  session:
+    store-type: redis
+    timeout: 2592000
   #可开放更大的文件上传体积
   servlet:
     multipart:

@@ -68,20 +68,20 @@ public abstract class PictureUploadTemplate {
             // 5. 获取图片信息对象，封装返回结果
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
 //            // 获取到图片处理结果
-//            ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();
-//            List<CIObject> objectList = processResults.getObjectList();
-//            if (CollUtil.isNotEmpty(objectList)) {
-//                // 获取压缩之后得到的文件信息
-//                CIObject compressedCiObject = objectList.get(0);
-//                // 缩略图默认等于压缩图
-//                CIObject thumbnailCiObject = compressedCiObject;
-//                // 有生成缩略图，才获取缩略图
-//                if (objectList.size() > 1) {
-//                    thumbnailCiObject = objectList.get(1);
-//                }
-//                // 封装压缩图的返回结果
-//                return buildResult(originalFilename, compressedCiObject, thumbnailCiObject, imageInfo);
-//            }
+            ProcessResults processResults = putObjectResult.getCiUploadResult().getProcessResults();
+            List<CIObject> objectList = processResults.getObjectList();
+            if (CollUtil.isNotEmpty(objectList)) {
+                // 获取压缩之后得到的文件信息
+                CIObject compressedCiObject = objectList.get(0);
+                // 缩略图默认等于压缩图
+                CIObject thumbnailCiObject = compressedCiObject;
+                // 有生成缩略图，才获取缩略图
+                if (objectList.size() > 1) {
+                    thumbnailCiObject = objectList.get(1);
+                }
+                // 封装压缩图的返回结果
+                return buildResult(originalFilename, compressedCiObject, thumbnailCiObject, imageInfo);
+            }
             return buildResult(originalFilename, file, uploadPath, imageInfo);
         } catch (Exception e) {
             log.error("图片上传到对象存储失败", e);
@@ -133,7 +133,7 @@ public abstract class PictureUploadTemplate {
         uploadPictureResult.setPicHeight(picHeight);
         uploadPictureResult.setPicScale(picScale);
         uploadPictureResult.setPicFormat(compressedCiObject.getFormat());
-        uploadPictureResult.setPicColor(imageInfo.getAve());
+        //uploadPictureResult.setPicColor(imageInfo.getAve());
         // 设置缩略图地址
         uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey());
         // 返回可访问的地址

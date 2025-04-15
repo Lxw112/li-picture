@@ -1,7 +1,8 @@
 package com.lxw.lipicturebackend.controller;
-
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.lxw.lipicturebackend.annotation.AuthCheck;
 import com.lxw.lipicturebackend.common.BaseResponse;
 import com.lxw.lipicturebackend.common.DeleteRequest;
@@ -28,6 +29,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/picture")
@@ -39,6 +41,16 @@ public class PictureController {
 
     @Resource
     private PictureService pictureService;
+
+
+
+    private final Cache<String, String> LOCAL_CACHE =
+            Caffeine.newBuilder().initialCapacity(1024)
+                    .maximumSize(10000L)
+                    // 缓存 5 分钟移除
+                    .expireAfterWrite(5L, TimeUnit.MINUTES)
+                    .build();
+
 
     /**
      * 上传图片(可重新上传)
@@ -110,6 +122,8 @@ public class PictureController {
         //操作数据库
         boolean result = pictureService.removeById(id);
         ThrowUtils.throwIf(!result,ErrorCode.OPERATION_ERROR);
+        //清理图片资源
+        pictureService.clearPictureFile(oldPicture);
         return ResultUtils.success(true);
     }
 
@@ -188,6 +202,8 @@ public class PictureController {
         return ResultUtils.success(picturePage);
     }
 
+
+
     /**
      * 分页获取图片列表（封装类）
      */
@@ -207,7 +223,22 @@ public class PictureController {
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage, request));
     }
 
-
+    /**
+     * 分页获取图片列表(有缓存)
+     * @param pictureQueryRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/list/page/vo/cache")
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
+                                                                      HttpServletRequest request) {
+        long size = pictureQueryRequest.getPageSize();
+        // 限制爬虫
+        ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
+        // 普通用户默认只能查看已过审的数据
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        return ResultUtils.success(pictureService.listPictureVOByPageWithCache(pictureQueryRequest,request));
+    }
     /**
      * 编辑图片(给用户使用)
      *

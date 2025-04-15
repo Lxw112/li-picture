@@ -115,6 +115,12 @@ public class Picture implements Serializable {
     @TableLogic
     private Integer isDelete;
 
+    /**
+     * 缩略图 url
+     */
+    private String thumbnailUrl;
+
+
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 }

@@ -44,12 +44,14 @@ public class UserVO implements Serializable {
     private String userRole;
 
 
-
     /**
      * 创建时间
      */
     private Date createTime;
 
-
+    /**
+     * 剩余扩图额度(次数)
+     */
+    private Integer remainingBalance;
 
 }

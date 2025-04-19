@@ -94,3 +94,6 @@ CREATE INDEX idx_spaceId ON picture (spaceId);
 
 ALTER TABLE picture
     ADD COLUMN picColor varchar(16) null comment '图片主色调';
+
+ALTER TABLE user
+    ADD COLUMN remainingBalance int null comment '剩余扩图额度（次数）'

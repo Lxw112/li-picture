@@ -1,10 +1,16 @@
 package com.lxw.lipicturebackend.controller;
 
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.lxw.lipicturebackend.annotation.AuthCheck;
+import com.lxw.lipicturebackend.api.aliyunai.AliYunAiApi;
+import com.lxw.lipicturebackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import com.lxw.lipicturebackend.api.aliyunai.model.GetOutPaintingTaskResponse;
 import com.lxw.lipicturebackend.api.imagesearch.ImageSearchApiFacade;
 import com.lxw.lipicturebackend.api.imagesearch.model.ImageSearchResult;
 import com.lxw.lipicturebackend.common.BaseResponse;
@@ -14,6 +20,7 @@ import com.lxw.lipicturebackend.constant.UserConstant;
 import com.lxw.lipicturebackend.exception.BusinessException;
 import com.lxw.lipicturebackend.exception.ErrorCode;
 import com.lxw.lipicturebackend.exception.ThrowUtils;
+import com.lxw.lipicturebackend.manager.RedisLimiterManager;
 import com.lxw.lipicturebackend.model.dto.picture.*;
 import com.lxw.lipicturebackend.model.entity.Picture;
 import com.lxw.lipicturebackend.model.entity.Space;
@@ -34,6 +41,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @RestController
@@ -50,6 +59,10 @@ public class PictureController {
     @Resource
     private SpaceService spaceService;
 
+    @Resource
+    private AliYunAiApi aliYunAiApi;
+    @Resource
+    private RedisLimiterManager redisLimiterManager;
     private final Cache<String, String> LOCAL_CACHE =
             Caffeine.newBuilder().initialCapacity(1024)
                     .maximumSize(10000L)
@@ -57,6 +70,7 @@ public class PictureController {
                     .expireAfterWrite(5L, TimeUnit.MINUTES)
                     .build();
 
+    private final Map<Long,Object> lockMap = new ConcurrentHashMap<>();
 
     /**
      * 上传图片(可重新上传)
@@ -337,5 +351,67 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         pictureService.editPictureByBatch(pictureEditByBatchRequest, loginUser);
         return ResultUtils.success(true);
+    }
+
+    /**
+     * 创建 AI 扩图任务
+     */
+    @PostMapping("/out_painting/create_task")
+    public BaseResponse<CreateOutPaintingTaskResponse> createPictureOutPaintingTask(@RequestBody CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest,
+                                                                                    HttpServletRequest request) {
+        if (createPictureOutPaintingTaskRequest == null || createPictureOutPaintingTaskRequest.getPictureId() == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        if (loginUser == null){
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR,"用户不存在");
+        }
+        if (loginUser.getId() != null){
+            //限流器，获取令牌
+            redisLimiterManager.doRateLimit("createPictureOutPaintingTask_" + loginUser.getId());
+        }
+        if (loginUser.getRemainingBalance() <= 0 ){
+            throw new BusinessException(ErrorCode.OPERATION_ERROR,"剩余扩图次数不足，请联系管理员进行充值");
+        }
+        CreateOutPaintingTaskResponse response = pictureService.createPictureOutPaintingTask(createPictureOutPaintingTaskRequest, loginUser);
+        UpdateWrapper<User> queryWrapper = new UpdateWrapper<>();
+        //加锁保证并发安全
+        Long userId = loginUser.getId();
+        Object lock = lockMap.computeIfAbsent(userId, key -> new Object());
+        synchronized (lock){
+            try {
+                //再次查询，避免极端情况下的超额消费
+                if (userService.getLoginUser(request).getRemainingBalance() <= 0){
+                    throw new BusinessException(ErrorCode.OPERATION_ERROR,"剩余扩图次数不足，请联系管理员进行充值");
+                }
+                queryWrapper.eq("id",loginUser.getId())
+                        .set("remainingBalance",loginUser.getRemainingBalance() - 1);
+                userService.update(queryWrapper);
+            } finally {
+                //防止内存泄漏
+                lockMap.remove(userId);
+            }
+        }
+        return ResultUtils.success(response);
+    }
+
+    /**
+     * 查询 AI 扩图任务
+     */
+    @GetMapping("/out_painting/get_task")
+    public BaseResponse<GetOutPaintingTaskResponse> getPictureOutPaintingTask(String taskId,HttpServletRequest request) {
+        ThrowUtils.throwIf(StrUtil.isBlank(taskId), ErrorCode.PARAMS_ERROR);
+        GetOutPaintingTaskResponse task = aliYunAiApi.getOutPaintingTask(taskId);
+        if (task.getOutput().getTaskStatus().equals("FAILED")){
+            UpdateWrapper<User> queryWrapper = new UpdateWrapper<>();
+            User loginUser = userService.getLoginUser(request);
+            if (loginUser == null){
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR,"用户不存在");
+            }
+            queryWrapper.eq("id",loginUser.getId())
+                    .set("remainingBalance",loginUser.getRemainingBalance() + 1);
+            userService.update(queryWrapper);
+        }
+        return ResultUtils.success(task);
     }
 }

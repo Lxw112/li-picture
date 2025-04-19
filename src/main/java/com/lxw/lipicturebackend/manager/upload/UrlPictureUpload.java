@@ -29,7 +29,6 @@ public class UrlPictureUpload extends PictureUploadTemplate {
         String fileUrl = (String) inputSource;
         // 1. 校验非空
         ThrowUtils.throwIf(StrUtil.isBlank(fileUrl), ErrorCode.PARAMS_ERROR, "文件地址为空");
-
         // 2. 校验 URL 格式
         try {
             new URL(fileUrl);
@@ -88,7 +87,14 @@ public class UrlPictureUpload extends PictureUploadTemplate {
     @Override
     protected String getOriginFilename(Object inputSource) {
         String fileUrl = (String) inputSource;
-        return FileUtil.getName(fileUrl);
+        String originFilename = FileUtil.getName(fileUrl);
+        //去掉ai扩图后返回的url路径里的查询参数，否则上传cos会失败
+        int queryIndex = originFilename.indexOf("?");
+        if (queryIndex != -1){
+            //如果存在查询参数，截取文件名部分
+            originFilename = originFilename.substring(0,queryIndex);
+        }
+        return originFilename;
     }
 
     @Override

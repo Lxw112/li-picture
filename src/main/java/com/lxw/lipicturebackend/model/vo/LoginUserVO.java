@@ -1,7 +1,5 @@
 package com.lxw.lipicturebackend.model.vo;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -60,5 +58,9 @@ public class LoginUserVO implements Serializable {
      */
     private Date updateTime;
 
+    /**
+     * 剩余扩图额度(次数)
+     */
+    private Integer remainingBalance;
 
 }

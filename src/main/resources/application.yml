@@ -29,6 +29,35 @@ spring:
   servlet:
     multipart:
       max-file-size: 10MB
+  # 空间图片分表
+  shardingsphere:
+    datasource:
+      names: li_picture
+      li_picture:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        url: jdbc:mysql://localhost:3306/li_picture
+        username: root
+        password: 123456
+    rules:
+      sharding:
+        tables:
+          picture:
+            actual-data-nodes: li_picture.picture  # 动态分表
+            table-strategy:
+              standard:
+                sharding-column: spaceId
+                sharding-algorithm-name: picture_sharding_algorithm  # 使用自定义分片算法
+        sharding-algorithms:
+          picture_sharding_algorithm:
+            type: CLASS_BASED
+            props:
+              strategy: standard
+              algorithmClassName: com.lxw.lipicturebackend.manager.sharding.PictureShardingAlgorithm
+    #生产环境关掉，日志会很多
+    props:
+      sql-show: true
+
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: false
@@ -39,6 +68,7 @@ mybatis-plus:
       logic-delete-field: isDelete
       logic-delete-value: 1
       logic-not-delete-value: 0
+    enable-sql-runner: true
 knife4j:
   enable: true
   openapi:

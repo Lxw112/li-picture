@@ -10,6 +10,7 @@ import com.lxw.lipicturebackend.constant.UserConstant;
 import com.lxw.lipicturebackend.exception.BusinessException;
 import com.lxw.lipicturebackend.exception.ErrorCode;
 import com.lxw.lipicturebackend.exception.ThrowUtils;
+import com.lxw.lipicturebackend.manager.auth.SpaceUserAuthManager;
 import com.lxw.lipicturebackend.model.dto.space.*;
 import com.lxw.lipicturebackend.model.entity.Picture;
 import com.lxw.lipicturebackend.model.entity.Space;
@@ -44,6 +45,9 @@ public class SpaceController {
 
     @Resource
     private PictureService pictureService;
+
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
 
 
     @PostMapping("/add")
@@ -145,8 +149,8 @@ public class SpaceController {
         ThrowUtils.throwIf(space == null, ErrorCode.NOT_FOUND_ERROR);
         SpaceVO spaceVO = spaceService.getSpaceVO(space, request);
         User loginUser = userService.getLoginUser(request);
-//        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
-//        spaceVO.setPermissionList(permissionList);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
         // 获取封装类
         return ResultUtils.success(spaceVO);
     }

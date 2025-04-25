@@ -17,12 +17,16 @@
             <result property="updateTime" column="updateTime" jdbcType="TIMESTAMP"/>
             <result property="isDelete" column="isDelete" jdbcType="TINYINT"/>
             <result property="remainingBalance" column="remainingBalance" jdbcType="TINYINT"/>
+            <result property="vipExpireTime" column="vipExpireTime" jdbcType="TIMESTAMP"/>
+            <result property="vipCode" column="vipCode" jdbcType="VARCHAR"/>
+            <result property="vipNumber" column="vipNumber" jdbcType="BIGINT"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id,userAccount,userPassword,
         userName,userAvatar,userProfile,
         userRole,editTime,createTime,
-        updateTime,isDelete,remainingBalance
+        updateTime,isDelete,remainingBalance,vipExpireTime,
+        vipCode,vipNumber
     </sql>
 </mapper>
